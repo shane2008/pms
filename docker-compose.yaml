@@ -1,0 +1,44 @@
+version: '3'
+
+services:
+  mysqldb:
+    image: mysql:5.7
+    container_name: mysql-container
+    volumes:
+      - ./pms_schema_data.sql:/docker-entrypoint-initdb.d/pms_schema_data.sql
+      - ./pms_test_schema_data.sql:/docker-entrypoint-initdb.d/pms_test_schema_data.sql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: pms_db
+      MYSQL_USER: pms_user
+      MYSQL_PASSWORD: pms_password
+    ports:
+      - "3306:3306"
+  pms-backend:
+    build:
+      context: ./pms-backend
+    container_name: pms-backend-container
+    command: sh -c "/wait && npm start"
+    environment:
+      MYSQL_HOST: mysqldb
+      MYSQL_USER: pms_user 
+      MYSQL_PASSWORD: pms_password
+      MYSQL_DB: pms_db
+      MYSQL_TEST_DB: pms_test_db
+      WAIT_HOSTS: mysqldb:3306
+      WAIT_HOSTS_TIMEOUT: 90
+      WAIT_SLEEP_INTERVAL: 4
+      WAIT_BEFORE_HOSTS: 25
+    ports:
+      - "8081:8081"
+    depends_on:
+      - mysqldb
+  pms-frontend:
+    build:
+      context: ./pms-frontend
+    container_name: pms-frontend-container
+    command: npm run serve
+    ports:
+      - "8080:8080"
+    depends_on:
+      - pms-backend
